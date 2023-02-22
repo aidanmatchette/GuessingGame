@@ -2,46 +2,61 @@ package main
 
 import (
 	"encoding/csv"
-	// "flag"
+	"flag"
 	"fmt"
-	"log"
 	"os"
+	"strings"
 )
 
-func check(e error, msg string) {
-    if e != nil {
-        log.Fatal(e)
+func main() {
+    csvFilename := flag.String("csv", "problems.txt", "a csv file in the format of 'question,answer'")
+    flag.Parse()
+
+    file, err := os.Open(*csvFilename)
+    if err != nil {
+        exit(fmt.Sprintf("Failed to open the CSV file: %s\n", *csvFilename))
     }
-}
+    r := csv.NewReader(file)
 
-func csvReader(filePath string) [][]string {
-    file, err := os.Open(filePath)
-    check(err, "Error opening file")
+    lines, err := r.ReadAll()
+    if err != nil {
+        exit("Failed to parse the provided CSV file")
+    }
+    problems := parseLines(lines)
 
-    reader := csv.NewReader(file)
+    correct := 0
 
-    records, err := reader.ReadAll()
-    check(err, "Error reading csv file")
-
-
-    return records
-}
-
-func startQuiz(quiz [][]string) {
-    var correctCount int
-    for i, question := range quiz{
+    for i, p := range problems {
+        fmt.Printf("Question #%d: %s = \n", i+1, p.question)
         var answer string
-        fmt.Printf("Question %d: %s \n", (i + 1), question[0])
-        fmt.Scan(&answer)
-        if answer == question[1] {
-            correctCount++
+        fmt.Scanf("%s\n", &answer)
+        if answer == p.answer {
+            correct++
         }
     }
-    fmt.Printf("You got %d questions correct", correctCount);
+    fmt.Printf("You scored %d out of %d.\n", correct, len(problems))
 }
 
-func main() {
-    res := csvReader("./problems.csv")
+func parseLines(lines [][]string) []problem {
+    ret := make([]problem, len(lines))
 
-    startQuiz(res)
+    for i, line := range lines {
+        ret[i] = problem{
+            question: line[0],
+            answer: strings.TrimSpace(line[1]),
+        }
+    }
+    return ret
+
 }
+
+type problem struct {
+    question string
+    answer string
+}
+
+func exit(msg string) {
+    fmt.Println(msg)
+    os.Exit(1)
+}
+
